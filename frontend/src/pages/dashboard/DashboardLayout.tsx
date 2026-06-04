@@ -48,7 +48,7 @@ export default function DashboardLayout() {
         )}
 
         <div className="flex-1 flex flex-col min-h-screen">
-          <header className="sticky top-0 z-20 border-b border-white/5 bg-[#08080a]/50 backdrop-blur-md">
+          <header className="sticky top-0 z-20 border-b border-white/5 bg-[#08080a]/50 backdrop-blur-md pt-[env(safe-area-inset-top)]">
             <Topbar onMenuClick={toggleSidebar} />
           </header>
           <div className="flex-1 p-4">
@@ -77,7 +77,7 @@ export default function DashboardLayout() {
 
       {/* Main content */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="sticky top-0 z-20 border-b border-white/5 bg-[#08080a]/50 backdrop-blur-md">
+        <header className="sticky top-0 z-20 border-b border-white/5 bg-[#08080a]/50 backdrop-blur-md pt-[env(safe-area-inset-top)]">
           <Topbar onMenuClick={toggleSidebar} />
         </header>
         <div className="flex-1 p-8">
