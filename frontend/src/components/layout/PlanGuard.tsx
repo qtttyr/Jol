@@ -1,4 +1,4 @@
-import { Crown, Sparkles } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
 
@@ -15,7 +15,7 @@ interface PlanGuardProps {
 
 export default function PlanGuard({ feature, children, fallback }: PlanGuardProps) {
   const { user } = useAuthStore();
-  const { projects } = useProjectStore();
+  useProjectStore();
 
   const plan = (user?.user_metadata as Record<string, string>)?.plan || 'free';
   const isPro = plan === 'pro' || plan === 'dev';
