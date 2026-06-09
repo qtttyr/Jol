@@ -19,7 +19,6 @@ import {
   Sparkles,
   ArrowRight,
   Check,
-  Lock,
   Shield,
   Eye,
   EyeOff,
