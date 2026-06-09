@@ -19,6 +19,10 @@ import {
   Sparkles,
   ArrowRight,
   Check,
+  Lock,
+  Shield,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../lib/utils";
@@ -31,6 +35,12 @@ export default function Settings() {
 
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ current: '', newPass: '', confirm: '' });
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   const [projectForm, setProjectForm] = useState({
     name: "",
@@ -181,11 +191,11 @@ export default function Settings() {
           </div>
 
           <div className="space-y-2">
-            <button className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted transition-colors text-left">
+            <button onClick={() => setShowPasswordModal(true)} className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted transition-colors text-left">
               <span className="text-sm font-medium">Change Password</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
-            <button className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted transition-colors text-left">
+            <button onClick={() => setShow2FAModal(true)} className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted transition-colors text-left">
               <span className="text-sm font-medium">Two-Factor Auth</span>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -258,6 +268,139 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <AnimatePresence>
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-card rounded-3xl border border-border p-5 space-y-5"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold">Change Password</h2>
+                <button
+                  onClick={() => setShowPasswordModal(false)}
+                  className="p-2 hover:bg-muted rounded-xl"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Current Password</label>
+                  <Input
+                    type="password"
+                    value={passwordForm.current}
+                    onChange={(e) => setPasswordForm(f => ({ ...f, current: e.target.value }))}
+                    placeholder="Enter current password"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">New Password</label>
+                  <div className="relative">
+                    <Input
+                      type={showNewPass ? "text" : "password"}
+                      value={passwordForm.newPass}
+                      onChange={(e) => setPasswordForm(f => ({ ...f, newPass: e.target.value }))}
+                      placeholder="Enter new password"
+                      className="pr-10"
+                    />
+                    <button
+                      onClick={() => setShowNewPass(!showNewPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Confirm Password</label>
+                  <Input
+                    type="password"
+                    value={passwordForm.confirm}
+                    onChange={(e) => setPasswordForm(f => ({ ...f, confirm: e.target.value }))}
+                    placeholder="Confirm new password"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowPasswordModal(false)} className="flex-1">Cancel</Button>
+                <Button
+                  onClick={async () => {
+                    if (!passwordForm.current || !passwordForm.newPass || !passwordForm.confirm) {
+                      toast.error("Please fill in all fields");
+                      return;
+                    }
+                    if (passwordForm.newPass !== passwordForm.confirm) {
+                      toast.error("Passwords don't match");
+                      return;
+                    }
+                    if (passwordForm.newPass.length < 6) {
+                      toast.error("Password must be at least 6 characters");
+                      return;
+                    }
+                    setPasswordSaving(true);
+                    try {
+                      const { error } = await (await import('../../lib/supabase')).supabase.auth.updateUser({ password: passwordForm.newPass });
+                      if (error) throw error;
+                      toast.success("Password updated successfully");
+                      setShowPasswordModal(false);
+                      setPasswordForm({ current: '', newPass: '', confirm: '' });
+                    } catch (err: unknown) {
+                      toast.error(err instanceof Error ? err.message : "Failed to update password");
+                    } finally {
+                      setPasswordSaving(false);
+                    }
+                  }}
+                  disabled={passwordSaving}
+                  className="flex-1"
+                >
+                  {passwordSaving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                  Update Password
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 2FA Modal */}
+      <AnimatePresence>
+        {show2FAModal && (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-card rounded-3xl border border-border p-6 space-y-5 text-center"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                <Shield className="w-7 h-7 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold mb-2">Two-Factor Authentication</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Two-factor authentication adds an extra layer of security to your account by requiring a verification code in addition to your password.
+                </p>
+              </div>
+              <div className="p-4 rounded-2xl bg-muted/50 space-y-2">
+                <p className="text-sm font-semibold text-foreground">Coming Soon</p>
+                <p className="text-xs text-muted-foreground">
+                  We're working on 2FA support. You'll be notified when it's available.
+                </p>
+              </div>
+              <Button onClick={() => setShow2FAModal(false)} className="w-full">
+                Got it
+              </Button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Project Modal */}
       <AnimatePresence>

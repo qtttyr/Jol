@@ -72,18 +72,30 @@ class AiClient:
         if response_type == "json":
             config["response_mime_type"] = "application/json"
 
-        try:
-            response = await asyncio.to_thread(
-                lambda: self.gemini.models.generate_content(
-                    model=self.MODEL_MAP[ModelTier.GEMINI_FLASH],
-                    contents=prompt,
-                    config=config,
+        last_error = None
+        for attempt in range(3):
+            try:
+                response = await asyncio.to_thread(
+                    lambda: self.gemini.models.generate_content(
+                        model=self.MODEL_MAP[ModelTier.GEMINI_FLASH],
+                        contents=prompt,
+                        config=config,
+                    )
                 )
-            )
-            return response.text
-        except Exception as e:
-            logger.error(f"Gemini call failed: {e}")
-            raise
+                return response.text
+            except Exception as e:
+                last_error = e
+                err_str = str(e).lower()
+                # Only retry on server errors (5xx) or rate limits
+                if "503" in err_str or "500" in err_str or "429" in err_str or "unavailable" in err_str:
+                    wait = 2 ** attempt
+                    logger.warning(f"Gemini call attempt {attempt + 1} failed ({e}), retrying in {wait}s...")
+                    await asyncio.sleep(wait)
+                else:
+                    break
+
+        logger.error(f"Gemini call failed after all retries: {last_error}")
+        raise last_error or RuntimeError("Gemini call failed")
 
     async def _call_groq(
         self,
@@ -99,7 +111,7 @@ class AiClient:
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
-                max_tokens=2000,
+                max_tokens=4096,
             )
             return response.choices[0].message.content or ""
         except Exception as e:
@@ -154,10 +166,12 @@ class AiClient:
                 return f'"{key}": "{val}"'
             return re.sub(r'"(\w+)":\s*`((?:[^`]|\n)*)`', _replace, text)
 
-        # Try parsing with multiple fallbacks
+        # Try parsing with multiple fallbacks — validate result is a dict
         for candidate in (clean, _fix_backtick(clean)):
             try:
-                return json.loads(candidate, strict=False)
+                parsed = json.loads(candidate, strict=False)
+                if isinstance(parsed, dict):
+                    return parsed
             except json.JSONDecodeError:
                 pass
 
@@ -168,6 +182,62 @@ class AiClient:
                 return json.loads(maybe.group(0), strict=False)
             except json.JSONDecodeError:
                 pass
+
+        def _unescape(s: str) -> str:
+            # Order matters: escaped backslash before other escapes
+            return (s.replace('\\\\', '\x00')
+                     .replace('\\n', '\n')
+                     .replace('\\r', '\r')
+                     .replace('\\t', '\t')
+                     .replace('\\"', '"')
+                     .replace('\x00', '\\'))
+
+        # Try extracting content field directly with lenient parsing
+        m = re.search(r'"content":\s*"((?:\\.|[^"\\])*)"\s*}', clean, re.DOTALL)
+        if m:
+            return {"content": _unescape(m.group(1))}
+
+        # Ultra-lenient: scan char by char for "content": " ... "}
+        idx = clean.find('"content": "')
+        if idx >= 0:
+            start = idx + len('"content": "')
+            remaining = clean[start:]
+            i = 0
+            while i < len(remaining):
+                if remaining[i] == '\\':
+                    i += 2
+                elif remaining[i] == '"' and i + 1 < len(remaining) and remaining[i + 1] == '}':
+                    return {"content": _unescape(remaining[:i])}
+                else:
+                    i += 1
+            # No closing found — take everything
+            return {"content": _unescape(remaining)}
+
+        # Fallback for known top-level keys — use greedy match to handle nested objects
+        for key in ("steps", "title", "description", "result", "data"):
+            m = re.search(r'"' + key + r'":\s*(\[.*\]|\{.*\})', clean, re.DOTALL)
+            if m:
+                try:
+                    val = json.loads(m.group(1), strict=False)
+                    return {key: val}
+                except (json.JSONDecodeError, ValueError):
+                    pass
+
+        # Last resort: try to find ANY valid JSON object/array in the text
+        for brace in (r'\{.*\}', r'\[.*\]'):
+            m = re.search(brace, clean, re.DOTALL)
+            if m:
+                try:
+                    parsed = json.loads(m.group(0), strict=False)
+                    if isinstance(parsed, dict):
+                        return parsed
+                    if isinstance(parsed, list) and len(parsed) > 0:
+                        # Detect if this looks like a roadmap steps array
+                        if isinstance(parsed[0], dict) and "title" in parsed[0]:
+                            return {"steps": parsed}
+                        return {"data": parsed}
+                except json.JSONDecodeError:
+                    pass
 
         logger.error(f"Failed to parse JSON from LLM response. Response: {text[:1000]}")
         raise RuntimeError("Invalid JSON from LLM")

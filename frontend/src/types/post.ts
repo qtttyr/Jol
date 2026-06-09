@@ -1,6 +1,6 @@
 export type PostType = 'data_driven' | 'storytelling' | 'hot_take';
 export type PostStatus = 'draft' | 'approved' | 'posted';
-export type Platform = 'telegram' | 'instagram' | 'threads' | 'medium' | 'linkedin';
+export type Platform = 'telegram' | 'instagram' | 'threads' | 'medium' | 'linkedin' | 'reddit';
 export type ContentLanguage = 'en' | 'ru' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ja' | 'zh' | 'ko' | 'ar' | 'hi';
 export type ContentStyle = 'professional' | 'casual' | 'humorous' | 'academic';
 

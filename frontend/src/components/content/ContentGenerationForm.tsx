@@ -26,6 +26,7 @@ const PLATFORMS: { value: Platform; label: string; maxChars: number }[] = [
   { value: 'instagram', label: 'Instagram', maxChars: 2000 },
   { value: 'telegram', label: 'Telegram', maxChars: 4000 },
   { value: 'medium', label: 'Medium', maxChars: 5000 },
+  { value: 'reddit', label: 'Reddit', maxChars: 40000 },
 ];
 
 const LANGUAGES: { value: ContentLanguage; label: string }[] = [

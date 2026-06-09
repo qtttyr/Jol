@@ -28,6 +28,7 @@ const PLATFORMS: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
   { value: 'telegram', label: 'Telegram' },
   { value: 'medium', label: 'Medium' },
+  { value: 'reddit', label: 'Reddit' },
 ];
 
 const LANGUAGES: { value: ContentLanguage; label: string }[] = [

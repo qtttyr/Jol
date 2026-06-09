@@ -19,7 +19,7 @@ export function useRoadmap() {
       setRoadmap(data);
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response?.status !== 404) {
-        toast.error(error.response?.data?.detail || "Failed to fetch roadmap");
+        toast.error(error.response?.data?.detail || 'Failed to fetch roadmap');
       }
     } finally {
       setLoading(false);
@@ -32,12 +32,12 @@ export function useRoadmap() {
     try {
       const { data } = await api.post(`/roadmap/${activeProject.id}/refresh`);
       setRoadmap(data);
-      toast.success("Roadmap regenerated successfully!");
+      toast.success('Roadmap regenerated successfully!');
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        toast.error(error.response?.data?.detail || "Failed to generate roadmap");
+        toast.error(error.response?.data?.detail || 'Failed to generate roadmap');
       } else {
-        toast.error("An error occurred");
+        toast.error('An error occurred');
       }
     } finally {
       setLoading(false);
@@ -49,10 +49,13 @@ export function useRoadmap() {
 
     const updatedSteps = roadmap.steps.map((step) => {
       if (step.id === stepId) {
-        return {
-           ...step, 
-           status: step.status === 'completed' ? 'pending' as const : 'completed' as const
-        };
+        const nextStatus =
+          step.status === 'pending'
+            ? 'in_progress' as const
+            : step.status === 'in_progress'
+              ? 'completed' as const
+              : 'pending' as const;
+        return { ...step, status: nextStatus };
       }
       return step;
     });
@@ -60,15 +63,15 @@ export function useRoadmap() {
     setRoadmap({ ...roadmap, steps: updatedSteps });
 
     try {
-      // Full save to supabase
       const { error } = await supabase
         .from('roadmaps')
         .update({ steps: updatedSteps })
         .eq('id', roadmap.id);
-
       if (error) throw error;
-    } catch (error: unknown) {
-      toast.error("Failed to save step status");
+    } catch {
+      toast.error('Failed to save step status');
+      // Revert on failure
+      fetchRoadmap();
     }
   };
 
@@ -77,6 +80,6 @@ export function useRoadmap() {
     loading,
     fetchRoadmap,
     refreshRoadmap,
-    toggleStepStatus
+    toggleStepStatus,
   };
 }

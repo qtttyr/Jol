@@ -14,7 +14,7 @@ router = APIRouter(prefix="/content", tags=["content"])
 
 class ContentGenerationRequest(BaseModel):
     post_type: Literal['data_driven', 'storytelling', 'hot_take']
-    platform: Literal['telegram', 'instagram', 'threads', 'medium', 'linkedin']
+    platform: Literal['telegram', 'instagram', 'threads', 'medium', 'linkedin', 'reddit']
     language: Literal['en', 'ru', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'zh', 'ko', 'ar', 'hi']
     style: Literal['professional', 'casual', 'humorous', 'academic']
 

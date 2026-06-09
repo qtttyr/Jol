@@ -2,6 +2,10 @@ export interface RoadmapStep {
   id: string;
   title: string;
   description: string;
+  how_to: string[];
+  resources: string[];
+  timeframe: string;
+  kpi: string;
   priority: 'low' | 'medium' | 'high';
   status: 'pending' | 'in_progress' | 'completed';
 }

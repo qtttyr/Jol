@@ -66,7 +66,7 @@ export function PostCard({ post, onClick }: PostCardProps) {
         </div>
 
         
-        <div className="text-sm text-muted-foreground line-clamp-3 leading-relaxed grow">
+        <div className="text-sm text-foreground/80 line-clamp-3 leading-relaxed grow">
           {previewText}
         </div>
       </CardContent>

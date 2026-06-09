@@ -14,7 +14,7 @@ OBJECTIVES = {
     "hot_take": HOT_TAKE_OBJECTIVE,
 }
 
-PLATFORMS = ["telegram", "instagram", "threads", "medium", "linkedin"]
+PLATFORMS = ["telegram", "instagram", "threads", "medium", "linkedin", "reddit"]
 LANGUAGES = ["en", "ru", "es", "fr", "de", "it", "pt", "ja", "zh", "ko", "ar", "hi"]
 STYLES = ["professional", "casual", "humorous", "academic"]
 
@@ -81,7 +81,7 @@ async def generate_post_with_params(
         result = await client.generate_json(
             prompt=prompt,
             tier=ModelTier.GROQ_WRITER,
-            estimated_tokens=800,
+            estimated_tokens=1500,
         )
         return result
     except Exception as e:

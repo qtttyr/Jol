@@ -1,52 +1,56 @@
-import json
+import uuid
+import logging
 from services.ai_client import ModelTier, get_ai_client
 from models.project import ProjectInDB
+from prompts.roadmap_prompts import ROADMAP_GENERATION_PROMPT
 
-ROADMAP_PROMPT = """
-You are a fractional CMO specializing in early-stage startups ({stage} stage).
-The founder is building a product in the {niche} space.
-
-STARTUP CONTEXT:
-Name: {name}
-Audience: {target_audience}
-Description: {description}
-
-Generate a step-by-step marketing roadmap tailored EXACTLY to this product and its current stage.
-If they are at the "idea" stage, focus on validation and initial audience building.
-If they are at "mvp", focus on acquiring early adopters.
-If they are at "growth" or "scale", focus on scalable distribution channels.
-
-INSTRUCTIONS:
-1. Provide exactly 5 highly actionable marketing steps.
-2. Do not give generic advice like "Start a blog". Be specific (e.g., "Launch a waitlist page targeting CTOs with this specific value prop").
-3. Assign a priority (high, medium, low) to each step.
-4. Output MUST be valid JSON in the following structure:
-{{
-    "steps": [
-        {{
-            "title": "Actionable title (max 6 words)",
-            "description": "Detailed explanation of what to do and why (2-3 sentences)",
-            "priority": "high"
-        }}
-    ]
-}}
-"""
+logger = logging.getLogger(__name__)
 
 
 async def generate_roadmap(project: ProjectInDB) -> dict:
-    prompt = ROADMAP_PROMPT.format(
+    brand = project.brand_voice_summary or "Professional but approachable"
+
+    prompt = ROADMAP_GENERATION_PROMPT.format(
+        name=project.name,
         stage=project.stage.value,
         niche=project.niche,
-        name=project.name,
         target_audience=project.target_audience,
         description=project.description,
+        brand_voice=brand,
     )
 
     client = get_ai_client()
     try:
-        return await client.generate_json(
+        result = await client.generate_json(
             prompt=prompt,
             tier=ModelTier.GEMINI_FLASH,
+            estimated_tokens=2048,
         )
     except Exception as e:
+        logger.warning(f"generate_json failed: {e}")
         return {"steps": []}
+
+    if not isinstance(result, dict):
+        logger.warning(f"generate_json returned non-dict: {type(result).__name__} = {str(result)[:200]}")
+        return {"steps": []}
+
+    steps_raw = result.get("steps", [])
+    if not steps_raw:
+        logger.warning(f"generate_json returned dict without steps key. Keys: {list(result.keys())[:10]}")
+        return {"steps": []}
+
+    steps = []
+    for i, s in enumerate(steps_raw):
+        steps.append({
+            "id": str(uuid.uuid4()),
+            "title": (s.get("title") or f"Step {i+1}").strip(),
+            "description": (s.get("description") or "").strip(),
+            "how_to": s.get("how_to", []),
+            "resources": s.get("resources", []),
+            "timeframe": (s.get("timeframe") or "").strip(),
+            "kpi": (s.get("kpi") or "").strip(),
+            "priority": s.get("priority", "medium") if s.get("priority") in ("high", "medium", "low") else "medium",
+            "status": "pending",
+        })
+
+    return {"steps": steps}

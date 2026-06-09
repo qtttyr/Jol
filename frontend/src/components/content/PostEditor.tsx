@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Post } from '../../types/post';
 import { PlatformPreview } from './PlatformPreview';
+import { QuickPost } from './QuickPost';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Save, CheckCircle, PenLine, Linkedin, Send, Globe, Hash, PenTool, Briefcase, MessageSquare, Zap } from 'lucide-react';
@@ -74,6 +75,9 @@ export function PostEditor({ post, onClose, onUpdate }: PostEditorProps) {
               Approve As Is
             </Button>
           )}
+          {!isEditing && (
+            <QuickPost platform={post.platform} content={post.content || ''} />
+          )}
         </div>
       </div>
       
@@ -90,6 +94,7 @@ export function PostEditor({ post, onClose, onUpdate }: PostEditorProps) {
           {post.platform === 'instagram' && <PenTool className="w-3 h-3 text-pink-500" />}
           {post.platform === 'telegram' && <Send className="w-3 h-3 text-[#2AABEE]" />}
           {post.platform === 'medium' && <Globe className="w-3 h-3 text-green-600" />}
+          {post.platform === 'reddit' && <MessageSquare className="w-3 h-3 text-[#FF4500]" />}
           <span className="capitalize">{post.platform}</span>
         </Badge>
         <Badge variant="outline" className="px-3 py-1 capitalize">{post.language}</Badge>
